@@ -4,6 +4,7 @@ use (
 	dogalarm
 	dogapm
 	ordersvc
+	protos
 	skusvc
 	usrsvc
 )
