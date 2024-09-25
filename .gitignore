@@ -5,6 +5,9 @@ main
 *groups-*.json
 .DS_Store
 
+# docker volumes
+volumes/
+
 # binary files
 
 # config file

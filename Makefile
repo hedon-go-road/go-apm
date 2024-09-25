@@ -3,3 +3,6 @@ main:
 
 genpb:
 	protoc --go_out=. ./protos/*
+
+setup:
+	docker compose  -f scripts/setup/docker-compose.yml up -d
