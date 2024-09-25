@@ -64,7 +64,7 @@ jobs:
           continue_on_error: true
           verbose: true
       # - name: Check test coverage
-      #   run: bash ./scripts/ci/check_test_coverage.sh
+      #   run: bash ./zscripts/ci/check_test_coverage.sh
       - name: Get tags info
         id: get_tag_message
         run: git fetch origin +refs/tags/*:refs/tags/*
