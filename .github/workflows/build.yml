@@ -49,22 +49,18 @@ jobs:
           working-directory: ${{ matrix.modules }}
       - name: Install dependencies ${{ matrix.modules }}
         run: go get ./...
-        with:
-          working-directory: ${{ matrix.modules }}
+        working-directory: ${{ matrix.modules }}
       - name: Check code format ${{ matrix.modules }}
         run: gofmt -l .
-        with:
-          working-directory: ${{ matrix.modules }}
+        working-directory: ${{ matrix.modules }}
       - name: Check the package for errors
         run: go build ./...
-        with:
-          working-directory: ${{ matrix.modules }}
+        working-directory: ${{ matrix.modules }}
       - name: Run tests with coverage and race detector ${{ matrix.modules }}
         run: |
           go test -v -race -covermode=atomic -coverpkg=./... -coverprofile=coverage.out ./...
           go tool cover -func=coverage.out
-        with:
-          working-directory: ${{ matrix.modules }}
+        working-directory: ${{ matrix.modules }}
       - name: Upload coverage to Codecov ${{ matrix.modules }}
         uses: codecov/codecov-action@v4.0.1
         with:
