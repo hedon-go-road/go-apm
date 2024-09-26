@@ -67,6 +67,19 @@ jobs:
       - name: Check the package for errors
         run: go build ./...
         working-directory: ${{ matrix.modules }}
+      - name: Wait for MySQL to be ready
+        run: |
+          for i in {1..30}; do
+            if mysqladmin ping -h 127.0.0.1 -P 23306 --silent; then
+              echo "MySQL is up!"
+              break
+            fi
+            echo "Waiting for MySQL..."
+            sleep 1
+          done
+      - name: Initialize database
+        run: |
+          mysql -h 127.0.0.1 -P 23306 -u root -proot < ./zscripts/setup/init.sql
       - name: Run tests with coverage and race detector
         run: |
           go test -v -race -covermode=atomic -coverpkg=./... -coverprofile=coverage.out ./...
