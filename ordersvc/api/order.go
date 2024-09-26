@@ -7,6 +7,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hedon-go-road/go-apm/dogapm"
+	"github.com/hedon-go-road/go-apm/ordersvc/grpcclient"
+	"github.com/hedon-go-road/go-apm/protos"
+	"github.com/spf13/cast"
 )
 
 type order struct {
@@ -20,16 +23,29 @@ func (o *order) Add(w http.ResponseWriter, request *http.Request) {
 	var (
 		uid, _   = strconv.Atoi(values.Get("uid"))
 		skuID, _ = strconv.Atoi(values.Get("sku_id"))
-		num, _   = strconv.Atoi(values.Get("num"))
+		num      = cast.ToInt32(values.Get("num"))
 	)
-	// check user info
+
+	// TODO: check user info
 
 	// deduct stock
+	res, err := grpcclient.SkuClient.DecreaseStock(context.TODO(), &protos.Sku{
+		Id:  int64(skuID),
+		Num: num,
+	})
+	if err != nil {
+		dogapm.Logger.Error(context.TODO(), "createOrder", map[string]any{
+			"sku_id": skuID,
+			"num":    num,
+		}, err)
+		dogapm.HttpStatus.Error(w, err.Error(), nil)
+		return
+	}
 
 	// create order
-	_, err := dogapm.Infra.DB.ExecContext(context.TODO(),
+	_, err = dogapm.Infra.DB.ExecContext(context.TODO(),
 		"INSERT INTO `t_order` (`order_id`, `sku_id`, `num`, `price`, `uid`) VALUES (?, ?, ?, ?, ?)",
-		uuid.NewString(), skuID, num, 1, uid,
+		uuid.NewString(), skuID, num, res.Price, uid,
 	)
 	if err != nil {
 		dogapm.Logger.Error(context.TODO(), "createOrder", map[string]any{
