@@ -35,9 +35,12 @@ jobs:
       matrix:
         modules: ${{ fromJSON(needs.detect-modules.outputs.modules) }}
     steps:
+      - uses: actions/checkout@v4
+      - name: List files
+        run: ls -R
       - name: Display Go version
         run: go version
-      - name: Cache Go modules ${{ matrix.modules }}
+      - name: Cache Go modules
         uses: actions/cache@v4
         with:
           path: |
@@ -46,8 +49,7 @@ jobs:
           key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-${{ matrix.go-version }}-
-          working-directory: ${{ matrix.modules }}
-      - name: Install dependencies ${{ matrix.modules }}
+      - name: Install dependencies
         run: go get ./...
         working-directory: ${{ matrix.modules }}
       - name: Check code format ${{ matrix.modules }}
@@ -56,15 +58,15 @@ jobs:
       - name: Check the package for errors
         run: go build ./...
         working-directory: ${{ matrix.modules }}
-      - name: Run tests with coverage and race detector ${{ matrix.modules }}
+      - name: Run tests with coverage and race detector
         run: |
           go test -v -race -covermode=atomic -coverpkg=./... -coverprofile=coverage.out ./...
           go tool cover -func=coverage.out
         working-directory: ${{ matrix.modules }}
-      - name: Upload coverage to Codecov ${{ matrix.modules }}
+      - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4.0.1
         with:
-          files: coverage_*.out
+          files: coverage.out
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: unittests
           name: codecov-umbrella
