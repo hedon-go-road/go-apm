@@ -16,11 +16,11 @@ func main() {
 	)
 
 	// init grpc clients
-	grpcclient.SkuClient = protos.NewSkuServiceClient(dogapm.NewGrpcClient(":10011"))
-	grpcclient.UserClient = protos.NewUserServiceClient(dogapm.NewGrpcClient(":10002"))
+	grpcclient.UserClient = protos.NewUserServiceClient(dogapm.NewGrpcClient(":30002"))
+	grpcclient.SkuClient = protos.NewSkuServiceClient(dogapm.NewGrpcClient(":30003"))
 
 	// init http server
-	hs := dogapm.NewHTTPServer(":10001")
+	hs := dogapm.NewHTTPServer(":30001")
 	hs.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("OK"))
 	})

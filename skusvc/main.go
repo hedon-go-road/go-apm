@@ -11,7 +11,7 @@ func main() {
 		dogapm.WithMySQL("root:root@tcp(127.0.0.1:23306)/skusvc?charset=utf8mb4&parseTime=True&loc=Local"),
 	)
 
-	gs := dogapm.NewGrpcServer(":10002")
+	gs := dogapm.NewGrpcServer(":30003")
 	protos.RegisterSkuServiceServer(gs, &api.SkuService{})
 
 	dogapm.EndPoint.Start()

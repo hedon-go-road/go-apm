@@ -17,7 +17,7 @@ type User struct {
 func (u *User) GetUser(ctx context.Context, req *protos.User) (*protos.User, error) {
 	info := dao.UserDao.Get(ctx, req.Id)
 	if info == nil {
-		return nil, status.Errorf(codes.NotFound, "user not found")
+		return nil, status.Errorf(codes.NotFound, "user not found in db")
 	}
 	return &protos.User{
 		Name: info["name"].(string),

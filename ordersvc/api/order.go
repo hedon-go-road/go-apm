@@ -35,7 +35,7 @@ func (o *order) Add(w http.ResponseWriter, request *http.Request) {
 		return
 	}
 	if userInfo.Id == 0 {
-		dogapm.HttpStatus.Error(w, "user not found", nil)
+		dogapm.HttpStatus.Error(w, "user not found from user service", nil)
 		return
 	}
 

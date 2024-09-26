@@ -8,7 +8,7 @@ import (
 
 type Status struct {
 	Code    int    `json:"code"`
-	Message string `json:"status"`
+	Message string `json:"message"`
 	Body    any    `json:"body"`
 }
 

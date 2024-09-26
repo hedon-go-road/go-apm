@@ -23,12 +23,23 @@ func (u *userDao) Get(ctx context.Context, uid int64) map[string]any {
 		}
 	}
 
+	dogapm.Logger.Debug(ctx, "userDao.Get", map[string]any{
+		"uid": uid,
+	})
+
 	raw, err := dogapm.Infra.DB.QueryContext(ctx,
-		"select * from `t_user` where uid = ?", uid)
+		"select * from `t_user` where id = ?", uid)
 	if err != nil {
+		dogapm.Logger.Error(ctx, "userDao.Get", map[string]any{
+			"uid": uid,
+		}, err)
 		return nil
 	}
 	info := dogapm.DBUtils.QueryFirst(raw, raw.Err())
+
+	dogapm.Logger.Debug(ctx, "userDao.Get", map[string]any{
+		"info": info,
+	})
 
 	if info != nil {
 		userInfo, err := json.Marshal(info)
@@ -36,6 +47,8 @@ func (u *userDao) Get(ctx context.Context, uid int64) map[string]any {
 			dogapm.Infra.RDB.Set(ctx, userKey(uid), string(userInfo), time.Minute*10)
 		}
 	}
+
+	fmt.Println("info", info)
 
 	return info
 }

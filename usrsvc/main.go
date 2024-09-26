@@ -12,7 +12,7 @@ func main() {
 		dogapm.WithRedis("127.0.0.1:26379"),
 	)
 
-	hs := dogapm.NewGrpcServer(":10002")
+	hs := dogapm.NewGrpcServer(":30002")
 	protos.RegisterUserServiceServer(hs.Server, &api.User{})
 
 	dogapm.EndPoint.Start()

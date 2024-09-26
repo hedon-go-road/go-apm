@@ -8,6 +8,8 @@ main
 # docker volumes
 volumes/
 
+logs/
+
 # binary files
 
 # config file
