@@ -16,7 +16,10 @@ func NewGrpcServer(addr string) *GrpcServer {
 	server := grpc.NewServer(
 		grpc.UnaryInterceptor(unaryServerInterceptor()),
 	)
-	return &GrpcServer{addr: addr, Server: server}
+	s := &GrpcServer{addr: addr, Server: server}
+	globalStarters = append(globalStarters, s)
+	globalClosers = append(globalClosers, s)
+	return s
 }
 
 func (s *GrpcServer) Start() {
@@ -29,6 +32,10 @@ func (s *GrpcServer) Start() {
 			panic("GRPC Server failed to serve: " + err.Error())
 		}
 	}()
+}
+
+func (s *GrpcServer) Close() {
+	s.Server.GracefulStop()
 }
 
 func unaryServerInterceptor() grpc.UnaryServerInterceptor {

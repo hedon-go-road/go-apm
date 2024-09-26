@@ -14,14 +14,24 @@ type HTTPServer struct {
 
 func NewHTTPServer(addr string) *HTTPServer {
 	mux := http.NewServeMux()
-	s := &http.Server{
-		Addr:              addr,
-		Handler:           mux,
-		ReadHeaderTimeout: 30 * time.Second, //nolint:mnd
+	s := &HTTPServer{
+		mux: mux,
+		Server: &http.Server{
+			Addr:              addr,
+			Handler:           mux,
+			ReadHeaderTimeout: 30 * time.Second, //nolint:mnd
+		},
 	}
-	return &HTTPServer{
-		mux:    mux,
-		Server: s,
+	globalStarters = append(globalStarters, s)
+	globalClosers = append(globalClosers, s)
+	return s
+}
+
+func (s *HTTPServer) Close() {
+	if s.Server != nil {
+		if err := s.Server.Shutdown(context.Background()); err != nil {
+			log.Println("Error stopping server:", err)
+		}
 	}
 }
 
