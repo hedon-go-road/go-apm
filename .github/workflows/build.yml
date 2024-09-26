@@ -13,22 +13,31 @@ on:
 permissions:
   contents: write
 
+env:
+  GO_VERSION: 1.22
+
 jobs:
-  build-go:
-    strategy:
-      matrix:
-        platform: [ubuntu-latest]
-        go-version: ['1.22']
-    runs-on: ${{ matrix.platform }}
+  detect-modules:
+    runs-on: ubuntu-latest
+    outputs:
+      modules: ${{ steps.set-modules.outputs.modules }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          fetch-depth: 0
-      - name: Setup Go ${{ matrix.go-version }}
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ matrix.go-version }}
-      - name: Cache Go modules
+          go-version: ${{ env.GO_VERSION }}
+      - id: set-modules
+        run: echo "modules=$(go list -m -json | jq -s '.' | jq -c '[.[].Dir]')" >> $GITHUB_OUTPUT
+  build-go:
+    needs: detect-modules
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        modules: ${{ fromJSON(needs.detect-modules.outputs.modules) }}
+    steps:
+      - name: Display Go version
+        run: go version
+      - name: Cache Go modules ${{ matrix.modules }}
         uses: actions/cache@v4
         with:
           path: |
@@ -37,17 +46,26 @@ jobs:
           key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-${{ matrix.go-version }}-
-      - name: Display Go version
-        run: go version
-      - name: Install dependencies
-        run: bash ./zscripts/ci/go_get.sh
-      - name: Check code format
+          working-directory: ${{ matrix.modules }}
+      - name: Install dependencies ${{ matrix.modules }}
+        run: go get ./...
+        with:
+          working-directory: ${{ matrix.modules }}
+      - name: Check code format ${{ matrix.modules }}
         run: gofmt -l .
+        with:
+          working-directory: ${{ matrix.modules }}
       - name: Check the package for errors
-        run: bash ./zscripts/ci/go_build.sh
-      - name: Run tests with coverage and race detector
-        run: bash ./zscripts/ci/go_test_cov.sh
-      - name: Upload coverage to Codecov
+        run: go build ./...
+        with:
+          working-directory: ${{ matrix.modules }}
+      - name: Run tests with coverage and race detector ${{ matrix.modules }}
+        run: |
+          go test -v -race -covermode=atomic -coverpkg=./... -coverprofile=coverage.out ./...
+          go tool cover -func=coverage.out
+        with:
+          working-directory: ${{ matrix.modules }}
+      - name: Upload coverage to Codecov ${{ matrix.modules }}
         uses: codecov/codecov-action@v4.0.1
         with:
           files: coverage_*.out
@@ -57,6 +75,7 @@ jobs:
           fail_ci_if_error: false
           continue_on_error: true
           verbose: true
+          working-directory: ${{ matrix.modules }}
       - name: Get tags info
         id: get_tag_message
         run: git fetch origin +refs/tags/*:refs/tags/*
