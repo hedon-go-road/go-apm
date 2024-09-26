@@ -34,10 +34,19 @@ jobs:
     strategy:
       matrix:
         modules: ${{ fromJSON(needs.detect-modules.outputs.modules) }}
+    services:
+      apm-mysql:
+        image: mysql:9.0.1
+        ports:
+          - 23306:3306
+        env:
+          MYSQL_ROOT_PASSWORD: root
+      apm-redis:
+        image: redis:7.4.0
+        ports:
+          - 26379:6379
     steps:
       - uses: actions/checkout@v4
-      - name: List files
-        run: ls -R
       - name: Display Go version
         run: go version
       - name: Cache Go modules
