@@ -40,19 +40,17 @@ jobs:
       - name: Display Go version
         run: go version
       - name: Install dependencies
-        run: go get ./...
+        run: bash ./zscripts/ci/go_get.sh
       - name: Check code format
         run: gofmt -l .
       - name: Check the package for errors
-        run: go build ./...
+        run: bash ./zscripts/ci/go_build.sh
       - name: Run tests with coverage and race detector
-        run: |
-          go test -v -race -covermode=atomic -coverpkg=./... -coverprofile=coverage.out ./...
-          go tool cover -func=coverage.out
+        run: bash ./zscripts/ci/go_test_cov.sh
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4.0.1
         with:
-          files: coverage.out
+          files: coverage_*.out
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: unittests
           name: codecov-umbrella
