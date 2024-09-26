@@ -45,6 +45,7 @@ func (s *HTTPServer) HandleFunc(pattern string, handler func(http.ResponseWriter
 
 func (s *HTTPServer) Start() {
 	go func() {
+		log.Println("statring http server")
 		if err := s.Server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal("Error starting server:", err)
 		}

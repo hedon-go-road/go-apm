@@ -2,6 +2,7 @@ package dogapm
 
 import (
 	"context"
+	"log"
 	"net"
 
 	"google.golang.org/grpc"
@@ -28,6 +29,7 @@ func (s *GrpcServer) Start() {
 		panic("GRPC Server failed to listen: " + err.Error())
 	}
 	go func() {
+		log.Println("starting grpc server")
 		if err := s.Serve(lis); err != nil {
 			panic("GRPC Server failed to serve: " + err.Error())
 		}
