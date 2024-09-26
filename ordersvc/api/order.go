@@ -26,7 +26,18 @@ func (o *order) Add(w http.ResponseWriter, request *http.Request) {
 		num      = cast.ToInt32(values.Get("num"))
 	)
 
-	// TODO: check user info
+	// check user info
+	userInfo, err := grpcclient.UserClient.GetUser(context.TODO(), &protos.User{
+		Id: int64(uid),
+	})
+	if err != nil {
+		dogapm.HttpStatus.Error(w, err.Error(), nil)
+		return
+	}
+	if userInfo.Id == 0 {
+		dogapm.HttpStatus.Error(w, "user not found", nil)
+		return
+	}
 
 	// deduct stock
 	res, err := grpcclient.SkuClient.DecreaseStock(context.TODO(), &protos.Sku{

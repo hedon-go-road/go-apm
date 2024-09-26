@@ -17,6 +17,7 @@ func main() {
 
 	// init grpc clients
 	grpcclient.SkuClient = protos.NewSkuServiceClient(dogapm.NewGrpcClient(":10011"))
+	grpcclient.UserClient = protos.NewUserServiceClient(dogapm.NewGrpcClient(":10002"))
 
 	// init http server
 	hs := dogapm.NewHTTPServer(":10001")

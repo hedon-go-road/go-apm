@@ -5,5 +5,6 @@ import (
 )
 
 var (
-	SkuClient protos.SkuServiceClient
+	SkuClient  protos.SkuServiceClient
+	UserClient protos.UserServiceClient
 )
