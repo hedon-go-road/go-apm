@@ -3,8 +3,11 @@ package dogapm
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"sync"
 	"time"
 
+	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/hedon-go-road/go-apm/dogapm/internal"
 	"github.com/redis/go-redis/v9"
@@ -24,12 +27,19 @@ type infra struct {
 }
 
 var Infra = &infra{}
+var once sync.Once
 
 type InfraOption func(i *infra)
 
 func WithMySQL(url string) InfraOption {
 	return func(i *infra) {
-		db, err := sql.Open("mysql", url)
+		driverName := fmt.Sprintf("%s-%s", "mysql", "wrap")
+
+		once.Do(func() {
+			sql.Register(driverName, wrap(&mysql.MySQLDriver{}))
+		})
+
+		db, err := sql.Open(driverName, url)
 		if err != nil {
 			panic(err)
 		}

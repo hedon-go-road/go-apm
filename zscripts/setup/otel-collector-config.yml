@@ -17,12 +17,19 @@ processors:
         {
           name: "error-always-sample",
           type: boolean_attribute,
-          boolean_attribute: {
-            key: error,
-            value: true
-          }
+          boolean_attribute: { key: error, value: true }
+        },
+        {
+          name: "slowsql-always-sample",
+          type: boolean_attribute,
+          boolean_attribute: { key: slowsql, value: true }
         }
       ]
+    filter/ottl:
+      error_mode: ignore
+      traces:
+        span:
+          - 'attributes["drop"] == true'
 
 exporters:
   debug:
@@ -47,5 +54,5 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [batch, tail_sampling]
+      processors: [batch, tail_sampling, filter/ottl]
       exporters: [debug, otlp/jaeger]
