@@ -13,6 +13,7 @@ func main() {
 	// init infra
 	dogapm.Infra.Init(
 		dogapm.WithMySQL("root:root@tcp(127.0.0.1:23306)/ordersvc?charset=utf8mb4&parseTime=True&loc=Local"),
+		dogapm.WithEnableAPM("127.0.0.1:4317"),
 	)
 
 	// init grpc clients

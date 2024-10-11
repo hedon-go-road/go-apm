@@ -2,9 +2,14 @@ package dogapm
 
 import (
 	"context"
+	"time"
 
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
+
+const traceID = "trace_id"
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
@@ -22,6 +27,12 @@ func (l *logger) Info(ctx context.Context, action string, kv map[string]any) {
 }
 
 func (l *logger) Error(ctx context.Context, action string, kv map[string]any, err error) {
+	if span := trace.SpanFromContext(ctx); span != nil {
+		kv[traceID] = span.SpanContext().TraceID().String()
+		span.SetAttributes(attribute.Bool("error", true))
+		span.RecordError(err, trace.WithStackTrace(true), trace.WithTimestamp(time.Now()))
+	}
+
 	logrus.WithContext(ctx).
 		WithFields(logrus.Fields(kv)).
 		WithError(err).

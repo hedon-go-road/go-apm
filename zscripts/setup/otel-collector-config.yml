@@ -1,0 +1,51 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+  tail_sampling:
+    decision_wait: 5s
+    num_traces: 50000
+    expected_new_traces_per_second: 1
+    policies:
+      [
+        {
+          name: "error-always-sample",
+          type: boolean_attribute,
+          boolean_attribute: {
+            key: error,
+            value: true
+          }
+        }
+      ]
+
+exporters:
+  debug:
+  otlp/jaeger:
+    endpoint: apm-jaeger:4317
+    tls:
+      insecure: true
+
+extensions:
+  health_check:
+  pprof:
+  zpages:
+    endpoint: 0.0.0.0:55679
+
+service:
+  telemetry:
+    logs:
+      level: debug
+    metrics:
+      level: detailed
+  extensions: [health_check, pprof, zpages]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch, tail_sampling]
+      exporters: [debug, otlp/jaeger]

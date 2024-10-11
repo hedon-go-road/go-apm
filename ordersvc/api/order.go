@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"net/http"
 	"strconv"
 
@@ -18,6 +17,9 @@ type order struct {
 var Order = &order{}
 
 func (o *order) Add(w http.ResponseWriter, request *http.Request) {
+	ctx, span := dogapm.Tracer.Start(request.Context(), "order.Add-Start")
+	defer span.End()
+
 	// get request body
 	values := request.URL.Query()
 	var (
@@ -27,10 +29,15 @@ func (o *order) Add(w http.ResponseWriter, request *http.Request) {
 	)
 
 	// check user info
-	userInfo, err := grpcclient.UserClient.GetUser(context.TODO(), &protos.User{
+	userInfo, err := grpcclient.UserClient.GetUser(ctx, &protos.User{
 		Id: int64(uid),
 	})
 	if err != nil {
+		dogapm.Logger.Error(ctx, "get user info from user service", map[string]any{
+			"uid":    uid,
+			"sku_id": skuID,
+			"num":    num,
+		}, err)
 		dogapm.HttpStatus.Error(w, err.Error(), nil)
 		return
 	}
@@ -40,12 +47,12 @@ func (o *order) Add(w http.ResponseWriter, request *http.Request) {
 	}
 
 	// deduct stock
-	res, err := grpcclient.SkuClient.DecreaseStock(context.TODO(), &protos.Sku{
+	res, err := grpcclient.SkuClient.DecreaseStock(ctx, &protos.Sku{
 		Id:  int64(skuID),
 		Num: num,
 	})
 	if err != nil {
-		dogapm.Logger.Error(context.TODO(), "createOrder", map[string]any{
+		dogapm.Logger.Error(ctx, "createOrder", map[string]any{
 			"sku_id": skuID,
 			"num":    num,
 		}, err)
@@ -54,12 +61,12 @@ func (o *order) Add(w http.ResponseWriter, request *http.Request) {
 	}
 
 	// create order
-	_, err = dogapm.Infra.DB.ExecContext(context.TODO(),
+	_, err = dogapm.Infra.DB.ExecContext(ctx,
 		"INSERT INTO `t_order` (`order_id`, `sku_id`, `num`, `price`, `uid`) VALUES (?, ?, ?, ?, ?)",
 		uuid.NewString(), skuID, num, res.Price, uid,
 	)
 	if err != nil {
-		dogapm.Logger.Error(context.TODO(), "createOrder", map[string]any{
+		dogapm.Logger.Error(ctx, "createOrder", map[string]any{
 			"uid":    uid,
 			"sku_id": skuID,
 			"num":    num,

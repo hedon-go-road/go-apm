@@ -1,4 +1,5 @@
 # if io timeout: https://github.com/docker/for-mac/issues/6621
+
 services:
   apm-mysql:
     image: mysql:9.0.1
@@ -20,3 +21,32 @@ services:
       - ./volumes/redis/data:/data
       - ./volumes/redis/logs:/var/log/redis
     restart: always
+  apm-jaeger:
+    image: jaegertracing/all-in-one:1.52
+    container_name: apm-jaeger
+    restart: always
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - LOG_LEVEL=debug
+    ports:
+      - 5775:5775/udp
+      - 6831:6831/udp
+      - 6832:6832/udp
+      - 5778:5778
+      - 16686:16686
+      - 14268:14268
+      - 14250:14250
+      - 9411:9411
+  apm-otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: apm-otel-collector
+    volumes:
+      - ./otel-collector-config.yml:/etc/otel-collector-config.yml
+    ports:
+      - 1888:1888  # pprof extension
+      - 8888:8888 # prometheus metrics exposed by the collector
+      - 8889:8889 # prometheus exporter metrics
+      - 13133:13133 # health check extension
+      - 4317:4317 # otlp grpc receiver
+      - 4318:4318 # otlp http receiver
+      - 55679:55679 # zpages extension

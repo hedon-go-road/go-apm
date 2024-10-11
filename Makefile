@@ -1,6 +1,15 @@
 genpb:
 	protoc --go_out=./protos --go-grpc_out=./protos ./protos/*.proto
 
+docker-up:
+	docker compose -f zscripts/setup/docker-compose.yml up -d
+
+docker-down:
+	docker compose -f zscripts/setup/docker-compose.yml down
+
+docker-restart:
+	docker compose -f zscripts/setup/docker-compose.yml restart
+
 setup:
 	docker compose  -f zscripts/setup/docker-compose.yml up -d
 	mysql -h 127.0.0.1 -P 23306 -u root -p < zscripts/setup/init.sql
@@ -14,13 +23,13 @@ setup:
 	ps -ef | grep ordersvc
 
 usr:
-	go run usrsvc/main.go > logs/usrsvc.log 2>&1 &
+	APP_NAME=usrsvc go run usrsvc/main.go > logs/usrsvc.log 2>&1 &
 
 sku:
-	go run skusvc/main.go > logs/skusvc.log 2>&1 &
+	APP_NAME=skusvc go run skusvc/main.go > logs/skusvc.log 2>&1 &
 
 order:
-	go run ordersvc/main.go > logs/ordersvc.log 2>&1 &
+	APP_NAME=ordersvc go run ordersvc/main.go > logs/ordersvc.log 2>&1 &
 
 stop:
 	lsof -i :30001 | grep "main" | awk '{print $$2}' | xargs kill
