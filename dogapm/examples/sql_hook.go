@@ -17,7 +17,7 @@ func main() {
 	//nolint:all
 	ctx, span := dogapm.Tracer.Start(context.Background(), "sql_hook_example")
 	defer span.End()
-	res, err := dogapm.Infra.DB.QueryContext(ctx, "select *, sleep(1) from t_order limit ?;", 1)
+	res, err := dogapm.Infra.DB.QueryContext(ctx, "select *, sleep(2) from t_order limit ?;", 1)
 	if err != nil {
 		fmt.Println("query err: ", err)
 	}

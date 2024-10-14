@@ -41,9 +41,11 @@ func wrap(d driver.Driver) driver.Driver {
 			}
 			now := time.Now()
 			span := trace.SpanFromContext(ctx)
-			if now.Sub(beginTime).Seconds() >= 1 {
+			elapsed := now.Sub(beginTime)
+			if elapsed.Seconds() >= 1 {
 				span.SetAttributes(
 					attribute.Bool("slowsql", true),
+					attribute.Int64("sql_duration_ms", elapsed.Milliseconds()),
 				)
 			}
 			span.End()
