@@ -23,6 +23,11 @@ processors:
           name: "slowsql-always-sample",
           type: boolean_attribute,
           boolean_attribute: { key: slowsql, value: true }
+        },
+        {
+          name: "longtx-always-sample",
+          type: boolean_attribute,
+          boolean_attribute: { key: longtx, value: true }
         }
       ]
   filter/ottl:

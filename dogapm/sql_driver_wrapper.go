@@ -4,6 +4,11 @@ import (
 	"context"
 	"database/sql/driver"
 	"errors"
+	"fmt"
+	"time"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Hooks struct {
@@ -64,13 +69,12 @@ func (conn *Conn) execContext(ctx context.Context, query string, args []driver.N
 }
 
 func (conn *Conn) queryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
-	switch c := conn.Conn.(type) {
-	case driver.QueryerContext:
+	if c, ok := conn.Conn.(driver.QueryerContext); ok {
 		return c.QueryContext(ctx, query, args)
-	default:
-		// This should not happen
-		return nil, errors.New("QueryerContext created for a non Queryer driver.Conn")
 	}
+
+	// This should not happen
+	return nil, errors.New("conn.Conn not implement driver.QueryerContext")
 }
 
 // nolint:dupl
@@ -127,7 +131,8 @@ func (stmt *Stmt) execContext(ctx context.Context, args []driver.NamedValue) (dr
 	if s, ok := stmt.Stmt.(driver.StmtExecContext); ok {
 		return s.ExecContext(ctx, args)
 	}
-	panic(errors.New("not implement"))
+
+	return nil, errors.New("stmt.Stmt not implement driver.StmtExecContext")
 }
 
 // nolint:dupl
@@ -157,7 +162,7 @@ func (stmt *Stmt) queryContext(ctx context.Context, args []driver.NamedValue) (d
 		return s.QueryContext(ctx, args)
 	}
 
-	panic(errors.New("not implement"))
+	return nil, errors.New("stmt.Stmt not implement driver.StmtQueryContext")
 }
 
 // nolint:dupl
@@ -180,4 +185,68 @@ func (stmt *Stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (d
 	}
 
 	return rows, err
+}
+
+type DriverTx struct {
+	driver.Tx
+	start time.Time
+	ctx   context.Context
+}
+
+// BeginTx starts and returns a new transaction.
+// If the context is canceled by the user the sql package will
+// call Tx.Rollback before discarding and closing the connection.
+//
+// This must check opts.Isolation to determine if there is a set
+// isolation level. If the driver does not support a non-default
+// level and one is set or if there is a non-default isolation level
+// that is not supported, an error must be returned.
+//
+// This must also check opts.ReadOnly to determine if the read-only
+// value is true to either set the read-only transaction property if supported
+// or return an error if it is not supported.
+func (conn *Conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, error) {
+	tx, err := conn.beginTx(ctx, opts)
+	if err != nil {
+		return tx, err
+	}
+
+	return &DriverTx{tx, time.Now(), ctx}, nil
+}
+
+func (conn *Conn) beginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, error) {
+	if c, ok := conn.Conn.(driver.ConnBeginTx); ok {
+		return c.BeginTx(ctx, opts)
+	}
+
+	return nil, errors.New("conn.Conn not implement driver.ConnBeginTx")
+}
+
+func (tx *DriverTx) Commit() error {
+	err := tx.Tx.Commit()
+	elapsed := time.Since(tx.start)
+	fmt.Println("tx commit elapsed: ", elapsed)
+	if elapsed >= longTxThreshold {
+		if span := trace.SpanFromContext(tx.ctx); span != nil {
+			span.SetAttributes(
+				attribute.Bool("longtx", true),
+				attribute.Int64("tx_duration_ms", elapsed.Milliseconds()),
+			)
+		}
+	}
+	return err
+}
+
+func (tx *DriverTx) Rollback() error {
+	err := tx.Tx.Rollback()
+	elapsed := time.Since(tx.start)
+	if elapsed >= longTxThreshold {
+		if span := trace.SpanFromContext(tx.ctx); span != nil {
+			span.SetAttributes(
+				attribute.Bool("longtx", true),
+				attribute.Int64("tx_duration_ms", elapsed.Milliseconds()),
+			)
+		}
+	}
+	return err
 }

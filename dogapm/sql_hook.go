@@ -18,6 +18,9 @@ const (
 	ctxKeyBeginTime ctxKey = "begin"
 	mysqlTracerName string = "dogapm/mysql"
 	maxLength       int    = 1024
+
+	slowSqlThreshold = 1 * time.Second
+	longTxThreshold  = 3 * time.Second
 )
 
 func wrap(d driver.Driver) driver.Driver {
@@ -42,7 +45,7 @@ func wrap(d driver.Driver) driver.Driver {
 			now := time.Now()
 			span := trace.SpanFromContext(ctx)
 			elapsed := now.Sub(beginTime)
-			if elapsed.Seconds() >= 1 {
+			if elapsed >= slowSqlThreshold {
 				span.SetAttributes(
 					attribute.Bool("slowsql", true),
 					attribute.Int64("sql_duration_ms", elapsed.Milliseconds()),
