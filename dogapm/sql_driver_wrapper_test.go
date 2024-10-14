@@ -18,15 +18,15 @@ func TestMySQLWrapper(t *testing.T) {
 	testDriver := &Driver{
 		Driver: mysql.MySQLDriver{},
 		hooks: Hooks{
-			Before: func(ctx context.Context, query string, args ...any) (context.Context, error) {
+			Before: func(ctx context.Context, query string, args ...interface{}) (context.Context, error) {
 				beforeAtomic.Store(true)
 				return ctx, nil
 			},
-			After: func(ctx context.Context, query string, args ...any) error {
+			After: func(ctx context.Context, query string, args ...interface{}) (context.Context, error) {
 				afterAtomic.Store(true)
-				return nil
+				return ctx, nil
 			},
-			OnError: func(ctx context.Context, err error, query string, args ...any) error {
+			OnError: func(ctx context.Context, err error, query string, args ...interface{}) error {
 				errorAtomic.Store(true)
 				return err
 			},

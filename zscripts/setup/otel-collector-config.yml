@@ -11,7 +11,7 @@ processors:
   tail_sampling:
     decision_wait: 5s
     num_traces: 50000
-    expected_new_traces_per_second: 1
+    expected_new_traces_per_sec: 1
     policies:
       [
         {
@@ -25,11 +25,11 @@ processors:
           boolean_attribute: { key: slowsql, value: true }
         }
       ]
-    filter/ottl:
-      error_mode: ignore
-      traces:
-        span:
-          - 'attributes["drop"] == true'
+  filter/ottl:
+    error_mode: ignore
+    traces:
+      span:
+        - 'attributes["drop"] == true'
 
 exporters:
   debug:
@@ -45,14 +45,9 @@ extensions:
     endpoint: 0.0.0.0:55679
 
 service:
-  telemetry:
-    logs:
-      level: debug
-    metrics:
-      level: detailed
   extensions: [health_check, pprof, zpages]
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [batch, tail_sampling, filter/ottl]
+      processors: [batch, filter/ottl, tail_sampling]
       exporters: [debug, otlp/jaeger]

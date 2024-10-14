@@ -3,11 +3,12 @@ package dogapm
 import (
 	"context"
 	"database/sql/driver"
+	"errors"
 )
 
 type Hooks struct {
 	Before  func(ctx context.Context, query string, args ...any) (context.Context, error)
-	After   func(ctx context.Context, query string, args ...any) error
+	After   func(ctx context.Context, query string, args ...any) (context.Context, error)
 	OnError func(ctx context.Context, err error, query string, args ...any) error
 }
 
@@ -16,77 +17,104 @@ type Driver struct {
 	hooks Hooks
 }
 
-func (d *Driver) Open(name string) (driver.Conn, error) {
-	conn, err := d.Driver.Open(name)
-	if err != nil {
-		return nil, err
-	}
-	return &Conn{Conn: conn, hooks: d.hooks}, nil
-}
-
 type Conn struct {
 	driver.Conn
 	hooks Hooks
 }
 
-//nolint:dupl
-func (c *Conn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
-	queryer, ok := c.Conn.(driver.QueryerContext)
-	if !ok {
-		panic("not implement driver.QueryerContext")
+func (drv *Driver) Open(name string) (driver.Conn, error) {
+	conn, err := drv.Driver.Open(name)
+	if err != nil {
+		return conn, err
 	}
+
+	wrapped := &Conn{conn, drv.hooks}
+	return wrapped, nil
+}
+
+// nolint:dupl
+func (conn *Conn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
+	var err error
 
 	list := namedToAny(args)
 
-	ctx, err := c.hooks.Before(ctx, query, list...)
-	if err != nil {
+	if ctx, err = conn.hooks.Before(ctx, query, list...); err != nil {
 		return nil, err
 	}
 
-	rows, err := queryer.QueryContext(ctx, query, args)
+	results, err := conn.execContext(ctx, query, args)
 	if err != nil {
-		return nil, c.hooks.OnError(ctx, err, query, list...)
+		return results, conn.hooks.OnError(ctx, err, query, list...)
 	}
 
-	return rows, c.hooks.After(ctx, query, list...)
+	if _, err := conn.hooks.After(ctx, query, list...); err != nil {
+		return nil, err
+	}
+
+	return results, err
 }
 
-//nolint:dupl
-func (c *Conn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
-	exec, ok := c.Conn.(driver.ExecerContext)
-	if !ok {
-		panic("not implement driver.ExecerContext")
+func (conn *Conn) execContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
+	switch c := conn.Conn.(type) {
+	case driver.ExecerContext:
+		return c.ExecContext(ctx, query, args)
+	default:
+		return nil, errors.New("ExecerContext created for a non Execer driver.Conn")
 	}
+}
+
+func (conn *Conn) queryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
+	switch c := conn.Conn.(type) {
+	case driver.QueryerContext:
+		return c.QueryContext(ctx, query, args)
+	default:
+		// This should not happen
+		return nil, errors.New("QueryerContext created for a non Queryer driver.Conn")
+	}
+}
+
+// nolint:dupl
+func (conn *Conn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
+	var err error
 
 	list := namedToAny(args)
 
-	ctx, err := c.hooks.Before(ctx, query, list...)
-	if err != nil {
+	if ctx, err = conn.hooks.Before(ctx, query, list...); err != nil {
 		return nil, err
 	}
 
-	result, err := exec.ExecContext(ctx, query, args)
+	results, err := conn.queryContext(ctx, query, args)
 	if err != nil {
-		return nil, c.hooks.OnError(ctx, err, query, list...)
+		return results, conn.hooks.OnError(ctx, err, query, list...)
 	}
 
-	return result, c.hooks.After(ctx, query, list...)
+	if _, err := conn.hooks.After(ctx, query, list...); err != nil {
+		return nil, err
+	}
+
+	return results, err
 }
 
-// PrepareContext returns a prepared statement, bound to this connection.
-// context is for the preparation of the statement,
-// it must not store the context within the statement itself.
-func (c *Conn) PrepareContext(ctx context.Context, query string) (driver.Stmt, error) {
-	prepare, ok := c.Conn.(driver.ConnPrepareContext)
-	if !ok {
-		panic("not implement driver.ConnPrepareContext")
+func namedToAny(args []driver.NamedValue) []any {
+	list := make([]any, len(args))
+	for i, a := range args {
+		list[i] = a.Value
 	}
+	return list
+}
 
-	stmt, err := prepare.PrepareContext(ctx, query)
-	if err != nil {
-		return nil, err
+func (conn *Conn) PrepareContext(ctx context.Context, query string) (driver.Stmt, error) {
+	var (
+		stmt driver.Stmt
+		err  error
+	)
+	if c, ok := conn.Conn.(driver.ConnPrepareContext); ok {
+		stmt, err = c.PrepareContext(ctx, query)
 	}
-	return &Stmt{Stmt: stmt, hooks: c.hooks, query: query}, nil
+	if err != nil {
+		return stmt, err
+	}
+	return &Stmt{stmt, conn.hooks, query}, nil
 }
 
 type Stmt struct {
@@ -95,74 +123,61 @@ type Stmt struct {
 	query string
 }
 
-// QueryContext executes a query that may return rows, such as a
-// SELECT.
-//
-// QueryContext must honor the context timeout and return when it is canceled.
-//
-//nolint:dupl
-func (s *Stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
-	stmt, ok := s.Stmt.(driver.StmtQueryContext)
-	if !ok {
-		panic("not implement driver.StmtQueryContext")
+func (stmt *Stmt) execContext(ctx context.Context, args []driver.NamedValue) (driver.Result, error) {
+	if s, ok := stmt.Stmt.(driver.StmtExecContext); ok {
+		return s.ExecContext(ctx, args)
 	}
-
-	result, err := s.execWithHooks(ctx, s.query, args,
-		func(ctx context.Context, args []driver.NamedValue) (interface{}, error) {
-			return stmt.QueryContext(ctx, args)
-		},
-	)
-
-	if err != nil {
-		return nil, err
-	}
-	return result.(driver.Rows), nil
+	panic(errors.New("not implement"))
 }
 
-// ExecContext executes a query that doesn't return rows, such
-// as an INSERT or UPDATE.
-//
-// ExecContext must honor the context timeout and return when it is canceled.
-//
-//nolint:dupl
-func (s *Stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (driver.Result, error) {
-	stmt, ok := s.Stmt.(driver.StmtExecContext)
-	if !ok {
-		panic("not implement driver.StmtExecContext")
-	}
+// nolint:dupl
+func (stmt *Stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (driver.Result, error) {
+	var err error
 
-	result, err := s.execWithHooks(ctx, s.query, args,
-		func(ctx context.Context, args []driver.NamedValue) (interface{}, error) {
-			return stmt.ExecContext(ctx, args)
-		},
-	)
-
-	if err != nil {
-		return nil, err
-	}
-	return result.(driver.Result), nil
-}
-
-func (s *Stmt) execWithHooks(ctx context.Context, query string, args []driver.NamedValue,
-	exec func(context.Context, []driver.NamedValue) (interface{}, error)) (interface{}, error) {
 	list := namedToAny(args)
-	ctx, err := s.hooks.Before(ctx, query, list...)
-	if err != nil {
+
+	if ctx, err = stmt.hooks.Before(ctx, stmt.query, list...); err != nil {
 		return nil, err
 	}
 
-	result, err := exec(ctx, args)
+	results, err := stmt.execContext(ctx, args)
 	if err != nil {
-		return nil, s.hooks.OnError(ctx, err, query, list...)
+		return results, stmt.hooks.OnError(ctx, err, stmt.query, list...)
 	}
 
-	return result, s.hooks.After(ctx, query, list...)
+	if _, err := stmt.hooks.After(ctx, stmt.query, list...); err != nil {
+		return nil, err
+	}
+
+	return results, err
 }
 
-func namedToAny(args []driver.NamedValue) []any {
-	anyArgs := make([]any, len(args))
-	for i, arg := range args {
-		anyArgs[i] = arg.Value
+func (stmt *Stmt) queryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
+	if s, ok := stmt.Stmt.(driver.StmtQueryContext); ok {
+		return s.QueryContext(ctx, args)
 	}
-	return anyArgs
+
+	panic(errors.New("not implement"))
+}
+
+// nolint:dupl
+func (stmt *Stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
+	var err error
+
+	list := namedToAny(args)
+
+	if ctx, err = stmt.hooks.Before(ctx, stmt.query, list...); err != nil {
+		return nil, err
+	}
+
+	rows, err := stmt.queryContext(ctx, args)
+	if err != nil {
+		return rows, stmt.hooks.OnError(ctx, err, stmt.query, list...)
+	}
+
+	if _, err := stmt.hooks.After(ctx, stmt.query, list...); err != nil {
+		return nil, err
+	}
+
+	return rows, err
 }

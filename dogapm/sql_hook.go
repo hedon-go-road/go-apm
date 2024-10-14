@@ -15,68 +15,61 @@ import (
 type ctxKey string
 
 const (
-	mysqlTracerName = "dogapm/mysql"
-	ctxKeyBeginTime = ctxKey("go.dogapm.mysql.begin_time")
-	maxLength       = 1024
+	ctxKeyBeginTime ctxKey = "begin"
+	mysqlTracerName string = "dogapm/mysql"
+	maxLength       int    = 1024
 )
 
-func wrap(dri driver.Driver) driver.Driver {
+func wrap(d driver.Driver) driver.Driver {
 	tracer := otel.Tracer(mysqlTracerName)
-
-	return &Driver{
-		Driver: dri,
-		hooks: Hooks{
-			Before: func(ctx context.Context, query string, args ...any) (context.Context, error) {
-				ctx = context.WithValue(ctx, ctxKeyBeginTime, time.Now())
-				if ctx, span := tracer.Start(ctx, "sqltrace"); span != nil {
-					span.SetAttributes(
-						attribute.String("sql", truncateParams(query)),
-						attribute.String("param", truncateParams(fmt.Sprintf("%v", args))),
-					)
-					return ctx, nil
-				}
+	return &Driver{d, Hooks{
+		Before: func(ctx context.Context, query string, args ...interface{}) (context.Context, error) {
+			ctx = context.WithValue(ctx, ctxKeyBeginTime, time.Now())
+			if ctx, span := tracer.Start(ctx, "sqltrace"); span != nil {
+				span.SetAttributes(
+					attribute.String("sql", truncate(query)),
+					attribute.String("param", truncate(fmt.Sprintf("%v", args...))),
+				)
 				return ctx, nil
-			},
-			After: func(ctx context.Context, query string, args ...any) error {
-				beginTime := time.Now()
-				if bt, ok := ctx.Value(ctxKeyBeginTime).(time.Time); ok {
-					beginTime = bt
-				}
-				elapsed := time.Since(beginTime)
-				span := trace.SpanFromContext(ctx)
-				if elapsed.Seconds() >= 1 {
-					span.SetAttributes(
-						attribute.Bool("slowsql", true),
-						attribute.Int64("sql_duration_ms", elapsed.Milliseconds()),
-					)
-				}
-				span.End()
-				return nil
-			},
-			OnError: func(ctx context.Context, err error, query string, args ...any) error {
-				span := trace.SpanFromContext(ctx)
-
-				// Ignore driver.ErrSkip because it just means the driver would run sql with prepared statement.
-				if errors.Is(err, driver.ErrSkip) {
-					// So we need to drop current span, because the following op is executing sql with prepared statement,
-					// which would create a new span.
-					span.SetAttributes(attribute.Bool("drop", true))
-				} else {
-					// If not ignore, set error flag and record error.
-					span.SetAttributes(attribute.Bool("error", true))
-					span.RecordError(err)
-				}
-
+			}
+			return ctx, nil
+		},
+		After: func(ctx context.Context, query string, args ...interface{}) (context.Context, error) {
+			beginTime := time.Now()
+			if begin := ctx.Value(ctxKeyBeginTime); begin != nil {
+				beginTime = begin.(time.Time)
+			}
+			now := time.Now()
+			span := trace.SpanFromContext(ctx)
+			if now.Sub(beginTime).Seconds() >= 1 {
+				span.SetAttributes(
+					attribute.Bool("slowsql", true),
+				)
+			}
+			span.End()
+			return ctx, nil
+		},
+		OnError: func(ctx context.Context, err error, query string, args ...interface{}) error {
+			span := trace.SpanFromContext(ctx)
+			fmt.Println("sql hook onerror: ", err)
+			if !errors.Is(err, driver.ErrSkip) {
+				span.SetAttributes(
+					attribute.Bool("error", true),
+				)
+				span.RecordError(err, trace.WithStackTrace(true))
 				span.End()
 				return err
-			},
+			}
+			span.SetAttributes(attribute.Bool("drop", true))
+			span.End()
+			return err
 		},
-	}
+	}}
 }
 
-func truncateParams(params string) string {
-	if len(params) < maxLength {
-		return params
+func truncate(query string) string {
+	if len(query) > maxLength {
+		return query[:maxLength]
 	}
-	return params[:maxLength] + "..."
+	return query
 }

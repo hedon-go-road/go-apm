@@ -8,7 +8,8 @@ docker-down:
 	docker compose -f zscripts/setup/docker-compose.yml down
 
 docker-restart:
-	docker compose -f zscripts/setup/docker-compose.yml restart
+	make docker-down
+	make docker-up
 
 setup:
 	docker compose  -f zscripts/setup/docker-compose.yml up -d

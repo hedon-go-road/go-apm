@@ -43,8 +43,12 @@ func (e *endPoint) Start() {
 }
 
 func (e *endPoint) Shutdown() {
-	for _, c := range globalClosers {
-		c.Close()
-	}
+	e.Close()
 	e.stop <- struct{}{}
+}
+
+func (e *endPoint) Close() {
+	for _, com := range globalClosers {
+		com.Close()
+	}
 }
