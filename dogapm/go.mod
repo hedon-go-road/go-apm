@@ -4,7 +4,7 @@ go 1.22.3
 
 require (
 	github.com/hedon-go-road/go-apm/protos v0.0.0-20240926034217-b3224d93c8ae
-	github.com/redis/go-redis/v9 v9.6.1
+	github.com/redis/go-redis/v9 v9.6.2
 )
 
 require (

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/hedon-go-road/go-apm/dogapm/internal"
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/otel"
@@ -58,6 +57,7 @@ func WithRedis(url string) InfraOption {
 			DB:       0,
 			Password: "",
 		})
+		client.AddHook(&redisHook{})
 		res, err := client.Ping(context.TODO()).Result()
 		if err != nil {
 			panic(err)
