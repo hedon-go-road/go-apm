@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/hedon-go-road/go-apm/dogapm/internal"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -125,4 +126,10 @@ func (i *infra) Init(opts ...InfraOption) {
 	}
 
 	Tracer = otel.Tracer(internal.BuildInfo.AppName())
+}
+
+func WithMetric(collectors ...prometheus.Collector) InfraOption {
+	return func(i *infra) {
+		prometheus.MustRegister(collectors...)
+	}
 }

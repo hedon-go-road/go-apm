@@ -1,3 +1,6 @@
 
 ### create order
 curl http://127.0.0.1:30001/order/add?uid=1&sku_id=3&num=1
+
+### get metrics
+curl http://127.0.0.1:30001/metrics

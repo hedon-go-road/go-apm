@@ -6,6 +6,7 @@ import (
 	"github.com/hedon-go-road/go-apm/dogapm"
 	"github.com/hedon-go-road/go-apm/ordersvc/api"
 	"github.com/hedon-go-road/go-apm/ordersvc/grpcclient"
+	"github.com/hedon-go-road/go-apm/ordersvc/metric"
 	"github.com/hedon-go-road/go-apm/protos"
 )
 
@@ -14,6 +15,7 @@ func main() {
 	dogapm.Infra.Init(
 		dogapm.WithMySQL("root:root@tcp(127.0.0.1:23306)/ordersvc?charset=utf8mb4&parseTime=True&loc=Local"),
 		dogapm.WithEnableAPM("127.0.0.1:4317"),
+		dogapm.WithMetric(metric.All()...),
 	)
 
 	// init grpc clients

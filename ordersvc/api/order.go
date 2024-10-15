@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/hedon-go-road/go-apm/dogapm"
 	"github.com/hedon-go-road/go-apm/ordersvc/grpcclient"
+	"github.com/hedon-go-road/go-apm/ordersvc/metric"
 	"github.com/hedon-go-road/go-apm/protos"
 	"github.com/spf13/cast"
 )
@@ -74,6 +75,9 @@ func (o *order) Add(w http.ResponseWriter, request *http.Request) {
 		dogapm.HttpStatus.Error(w, err.Error(), nil)
 		return
 	}
+
+	// add order-success metric
+	metric.OrderSuccessCounter.WithLabelValues(strconv.Itoa(skuID)).Inc()
 
 	// return
 	dogapm.HttpStatus.Ok(w)

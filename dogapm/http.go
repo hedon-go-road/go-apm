@@ -4,8 +4,10 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
@@ -33,6 +35,10 @@ func NewHTTPServer(addr string) *HTTPServer {
 		},
 		tracer: otel.Tracer(httpTracerName),
 	}
+	s.Handle("/metrics", promhttp.HandlerFor(MetricsReg, promhttp.HandlerOpts{
+		Registry: MetricsReg,
+	}))
+
 	globalStarters = append(globalStarters, s)
 	globalClosers = append(globalClosers, s)
 	return s
@@ -85,6 +91,10 @@ func (h *traceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.handler.ServeHTTP(w, r)
 		return
 	}
+	// metrics
+	serverHandleCounter.WithLabelValues(MetricTypeHTTP, r.Method+"."+r.URL.Path).Inc()
+
+	// trace
 	ctx := r.Context()
 	ctx = otel.GetTextMapPropagator().Extract(ctx, propagation.HeaderCarrier(r.Header))
 	ctx, span := h.tracer.Start(ctx, "HTTP "+r.Method+" "+r.URL.Path)
@@ -93,7 +103,6 @@ func (h *traceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	respWrapper := &responseWrapper{ResponseWriter: w}
 
 	start := time.Now()
-
 	func() {
 		// panic recover
 		defer func() {
@@ -122,6 +131,9 @@ func (h *traceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Value: attribute.Int64Value(elapsed.Milliseconds()),
 		},
 	)
+
+	// metrics
+	serverHandleHistogram.WithLabelValues(MetricTypeHTTP, r.Method+"."+r.URL.Path, strconv.Itoa(respWrapper.status)).Observe(elapsed.Seconds())
 }
 
 type responseWrapper struct {
