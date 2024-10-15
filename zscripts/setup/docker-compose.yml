@@ -47,3 +47,20 @@ services:
       - 4317:4317 # OTLP gRPC receiver
       - 4318:4318 # OTLP HTTP receiver
       - 55679:55679 # zpages extension
+  apm-grafana:
+    image: grafana/grafana:11.2.2
+    container_name: apm-grafana
+    restart: always
+    ports:
+      - 3000:3000
+    volumes:
+      - ./volumes/grafana/data:/var/lib/grafana
+      - ./volumes/grafana/logs:/var/log/grafana
+  apm-prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: apm-prometheus
+    restart: always
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - 9090:9090

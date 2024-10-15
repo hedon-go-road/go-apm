@@ -53,3 +53,6 @@ status:
 	lsof -i :30001
 	lsof -i :30002
 	lsof -i :30003
+
+ab:
+	bash zscripts/setup/ab.sh

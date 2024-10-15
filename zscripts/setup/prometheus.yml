@@ -1,0 +1,8 @@
+global:
+  scrape_interval: 15s
+scrape_configs:
+  - job_name: 'ordersvc'
+    scrape_interval: 5s
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['10.30.16.34:30001'] # use host ip
