@@ -2,10 +2,19 @@ package dogapm
 
 import (
 	"context"
-	"log"
+	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
+)
+
+const (
+	grpcClientTracerName = "dogapm/grpcClient"
 )
 
 type GrpcClient struct {
@@ -24,12 +33,34 @@ func NewGrpcClient(target string) *GrpcClient {
 }
 
 func unaryInterceptor() grpc.UnaryClientInterceptor {
-	return func(ctx context.Context, method string, req, reply interface{},
+	tracer := otel.Tracer(grpcClientTracerName)
+
+	return func(ctx context.Context, method string, req, reply any,
 		cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-		if err := invoker(ctx, method, req, reply, cc, opts...); err != nil {
-			log.Printf("GRPC Client failed to invoke method: %v", err)
-			return err
+
+		ctx, span := tracer.Start(ctx, method, trace.WithSpanKind(trace.SpanKindClient))
+		start := time.Now()
+		defer func() {
+			span.SetAttributes(attribute.Int64("grpc.duration_ms", time.Since(start).Milliseconds()))
+			span.End()
+		}()
+
+		md, ok := metadata.FromOutgoingContext(ctx)
+		if !ok {
+			md = metadata.MD{}
 		}
-		return nil
+		otel.GetTextMapPropagator().Inject(ctx, &metadataSupplier{metadata: &md})
+		ctx = metadata.NewOutgoingContext(ctx, md)
+
+		// invoke the actual grpc call
+		err := invoker(ctx, method, req, reply, cc, opts...)
+
+		if err != nil {
+			s, _ := status.FromError(err)
+			span.RecordError(err, trace.WithTimestamp(time.Now()), trace.WithStackTrace(true))
+			span.SetAttributes(attribute.Bool("error", true))
+			span.SetAttributes(attribute.String("grpc.status_code", s.Code().String()))
+		}
+		return err
 	}
 }

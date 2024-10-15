@@ -20,8 +20,6 @@ func (o *order) Add(w http.ResponseWriter, request *http.Request) {
 	ctx, span := dogapm.Tracer.Start(request.Context(), "order.Add-Start")
 	defer span.End()
 
-	panic("error")
-
 	// get request body
 	values := request.URL.Query()
 	var (

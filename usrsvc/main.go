@@ -10,6 +10,7 @@ func main() {
 	dogapm.Infra.Init(
 		dogapm.WithMySQL("root:root@tcp(127.0.0.1:23306)/usrsvc?charset=utf8mb4&parseTime=True&loc=Local"),
 		dogapm.WithRedis("127.0.0.1:26379"),
+		dogapm.WithEnableAPM("127.0.0.1:4317"),
 	)
 
 	hs := dogapm.NewGrpcServer(":30002")

@@ -9,6 +9,7 @@ import (
 func main() {
 	dogapm.Infra.Init(
 		dogapm.WithMySQL("root:root@tcp(127.0.0.1:23306)/skusvc?charset=utf8mb4&parseTime=True&loc=Local"),
+		dogapm.WithEnableAPM("127.0.0.1:4317"),
 	)
 
 	gs := dogapm.NewGrpcServer(":30003")

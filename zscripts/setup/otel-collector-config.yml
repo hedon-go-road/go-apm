@@ -39,6 +39,11 @@ processors:
           type: numeric_attribute,
           numeric_attribute: { key: http.status_code, min_value: 500, max_value: 599 }
         },
+        {
+          name: grpc-slow,
+          type: numeric_attribute,
+          numeric_attribute: { key: grpc.duration_ms, min_value: 1000, max_value: 9223372036854775807 }
+        },
       ]
   filter/ottl:
     error_mode: ignore
