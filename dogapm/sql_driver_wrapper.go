@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql/driver"
 	"errors"
-	"fmt"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -225,7 +224,6 @@ func (conn *Conn) beginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx
 func (tx *DriverTx) Commit() error {
 	err := tx.Tx.Commit()
 	elapsed := time.Since(tx.start)
-	fmt.Println("tx commit elapsed: ", elapsed)
 	if elapsed >= longTxThreshold {
 		if span := trace.SpanFromContext(tx.ctx); span != nil {
 			span.SetAttributes(

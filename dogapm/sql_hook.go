@@ -26,25 +26,24 @@ const (
 func wrap(d driver.Driver) driver.Driver {
 	tracer := otel.Tracer(mysqlTracerName)
 	return &Driver{d, Hooks{
-		Before: func(ctx context.Context, query string, args ...interface{}) (context.Context, error) {
+		Before: func(ctx context.Context, query string, args ...any) (context.Context, error) {
 			ctx = context.WithValue(ctx, ctxKeyBeginTime, time.Now())
 			if ctx, span := tracer.Start(ctx, "sqltrace"); span != nil {
 				span.SetAttributes(
 					attribute.String("sql", truncate(query)),
-					attribute.String("param", truncate(fmt.Sprintf("%v", args...))),
+					attribute.String("param", truncate(sliceToString(args))),
 				)
 				return ctx, nil
 			}
 			return ctx, nil
 		},
-		After: func(ctx context.Context, query string, args ...interface{}) (context.Context, error) {
+		After: func(ctx context.Context, query string, args ...any) (context.Context, error) {
 			beginTime := time.Now()
 			if begin := ctx.Value(ctxKeyBeginTime); begin != nil {
 				beginTime = begin.(time.Time)
 			}
-			now := time.Now()
 			span := trace.SpanFromContext(ctx)
-			elapsed := now.Sub(beginTime)
+			elapsed := time.Since(beginTime)
 			if elapsed >= slowSqlThreshold {
 				span.SetAttributes(
 					attribute.Bool("slowsql", true),
@@ -54,9 +53,8 @@ func wrap(d driver.Driver) driver.Driver {
 			span.End()
 			return ctx, nil
 		},
-		OnError: func(ctx context.Context, err error, query string, args ...interface{}) error {
+		OnError: func(ctx context.Context, err error, query string, args ...any) error {
 			span := trace.SpanFromContext(ctx)
-			fmt.Println("sql hook onerror: ", err)
 			if !errors.Is(err, driver.ErrSkip) {
 				span.SetAttributes(
 					attribute.Bool("error", true),
@@ -77,4 +75,11 @@ func truncate(query string) string {
 		return query[:maxLength]
 	}
 	return query
+}
+
+func sliceToString(args []any) string {
+	if len(args) == 0 {
+		return "[]"
+	}
+	return fmt.Sprintf("%v", args)
 }
