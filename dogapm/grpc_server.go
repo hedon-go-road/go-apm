@@ -64,6 +64,7 @@ func unaryServerInterceptor() grpc.UnaryServerInterceptor {
 		if !ok {
 			md = metadata.MD{}
 		}
+		peerApp, peerHost := getPeerInfo(md)
 
 		// extract the metadata from the context
 		ctx = otel.GetTextMapPropagator().Extract(ctx, &metadataSupplier{metadata: &md})
@@ -78,11 +79,13 @@ func unaryServerInterceptor() grpc.UnaryServerInterceptor {
 			span.End()
 
 			// metric
-			serverHandleHistogram.WithLabelValues(MetricTypeGRPC, info.FullMethod, statusCode.String()).Observe(time.Since(start).Seconds())
+			serverHandleHistogram.WithLabelValues(
+				MetricTypeGRPC, info.FullMethod, statusCode.String(), peerApp, peerHost,
+			).Observe(time.Since(start).Seconds())
 		}()
 
 		// metric
-		serverHandleCounter.WithLabelValues(MetricTypeGRPC, info.FullMethod).Inc()
+		serverHandleCounter.WithLabelValues(MetricTypeGRPC, info.FullMethod, peerApp, peerHost).Inc()
 
 		// call the handler
 		resp, err := handler(ctx, req)
@@ -98,4 +101,16 @@ func unaryServerInterceptor() grpc.UnaryServerInterceptor {
 
 		return resp, err
 	}
+}
+
+func getPeerInfo(md metadata.MD) (peerApp, peerHost string) {
+	peerApps := md.Get(metadataKeyPeerApp)
+	if len(peerApps) > 0 {
+		peerApp = peerApps[0]
+	}
+	peerHosts := md.Get(metadataKeyPeerHost)
+	if len(peerHosts) > 0 {
+		peerHost = peerHosts[0]
+	}
+	return peerApp, peerHost
 }

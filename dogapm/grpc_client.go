@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/hedon-go-road/go-apm/dogapm/internal"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -15,6 +16,11 @@ import (
 
 const (
 	grpcClientTracerName = "dogapm/grpcClient"
+)
+
+const (
+	metadataKeyPeerApp  = "peerApp"
+	metadataKeyPeerHost = "peerHost"
 )
 
 type GrpcClient struct {
@@ -53,6 +59,8 @@ func unaryInterceptor(server string) grpc.UnaryClientInterceptor {
 		if !ok {
 			md = metadata.MD{}
 		}
+		md.Set(metadataKeyPeerApp, internal.BuildInfo.AppName())
+		md.Set(metadataKeyPeerHost, internal.BuildInfo.Hostname())
 		otel.GetTextMapPropagator().Inject(ctx, &metadataSupplier{metadata: &md})
 		ctx = metadata.NewOutgoingContext(ctx, md)
 

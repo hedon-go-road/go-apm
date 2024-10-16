@@ -45,12 +45,12 @@ var (
 	serverHandleHistogram = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "server_handle_seconds",
 		Help: "The duration of the server handle",
-	}, []string{"type", "method", "status"})
+	}, []string{"type", "method", "status", "peer", "peer_host"})
 
 	serverHandleCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "server_handle_total",
 		Help: "The total number of server handle",
-	}, []string{"type", "method"})
+	}, []string{"type", "method", "peer", "peer_host"})
 
 	clientHandleCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "client_handle_total",

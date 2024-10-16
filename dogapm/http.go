@@ -93,7 +93,7 @@ func (h *traceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// metrics
-	serverHandleCounter.WithLabelValues(MetricTypeHTTP, r.Method+"."+r.URL.Path).Inc()
+	serverHandleCounter.WithLabelValues(MetricTypeHTTP, r.Method+"."+r.URL.Path, "", "").Inc()
 
 	// trace
 	ctx := r.Context()
@@ -134,7 +134,9 @@ func (h *traceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	)
 
 	// metrics
-	serverHandleHistogram.WithLabelValues(MetricTypeHTTP, r.Method+"."+r.URL.Path, strconv.Itoa(respWrapper.status)).Observe(elapsed.Seconds())
+	serverHandleHistogram.WithLabelValues(
+		MetricTypeHTTP, r.Method+"."+r.URL.Path, strconv.Itoa(respWrapper.status), "", "",
+	).Observe(elapsed.Seconds())
 }
 
 type responseWrapper struct {
