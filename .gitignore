@@ -7,6 +7,7 @@ main
 
 # docker volumes
 volumes/
+zscripts/setup/build/
 
 logs/
 

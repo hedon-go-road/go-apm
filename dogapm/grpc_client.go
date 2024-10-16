@@ -21,9 +21,9 @@ type GrpcClient struct {
 	*grpc.ClientConn
 }
 
-func NewGrpcClient(target string) *GrpcClient {
-	conn, err := grpc.NewClient(target,
-		grpc.WithUnaryInterceptor(unaryInterceptor()),
+func NewGrpcClient(addr, server string) *GrpcClient {
+	conn, err := grpc.NewClient(addr,
+		grpc.WithUnaryInterceptor(unaryInterceptor(server)),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
@@ -32,17 +32,21 @@ func NewGrpcClient(target string) *GrpcClient {
 	return &GrpcClient{conn}
 }
 
-func unaryInterceptor() grpc.UnaryClientInterceptor {
+func unaryInterceptor(server string) grpc.UnaryClientInterceptor {
 	tracer := otel.Tracer(grpcClientTracerName)
 
 	return func(ctx context.Context, method string, req, reply any,
 		cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 
+		// trace
 		ctx, span := tracer.Start(ctx, method, trace.WithSpanKind(trace.SpanKindClient))
 		start := time.Now()
 		defer func() {
 			span.SetAttributes(attribute.Int64("grpc.duration_ms", time.Since(start).Milliseconds()))
 			span.End()
+
+			// metric
+			clientHandleHistogram.WithLabelValues(MetricTypeGRPC, method, server).Observe(time.Since(start).Seconds())
 		}()
 
 		md, ok := metadata.FromOutgoingContext(ctx)
@@ -51,6 +55,9 @@ func unaryInterceptor() grpc.UnaryClientInterceptor {
 		}
 		otel.GetTextMapPropagator().Inject(ctx, &metadataSupplier{metadata: &md})
 		ctx = metadata.NewOutgoingContext(ctx, md)
+
+		// metric
+		clientHandleCounter.WithLabelValues(MetricTypeGRPC, method, server).Inc()
 
 		// invoke the actual grpc call
 		err := invoker(ctx, method, req, reply, cc, opts...)

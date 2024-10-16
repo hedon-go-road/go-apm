@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/hedon-go-road/go-apm/dogapm/internal"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -68,7 +69,7 @@ func (s *HTTPServer) HandleFunc(pattern string, handler func(http.ResponseWriter
 
 func (s *HTTPServer) Start() {
 	go func() {
-		log.Println("statring http server")
+		log.Printf("[%s][%s] starting http server on: %s\n", internal.BuildInfo.AppName(), internal.BuildInfo.Hostname(), s.Addr)
 		if err := s.Server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal("Error starting server:", err)
 		}

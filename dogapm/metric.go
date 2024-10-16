@@ -10,9 +10,11 @@ import (
 )
 
 const (
-	MetricTypeHTTP  = "http"
-	MetricTypeGRPC  = "grpc"
-	MetricTypeMySQL = "mysql"
+	MetricTypeHTTP = "http"
+	MetricTypeGRPC = "grpc"
+
+	LibraryTypeMySQL = "mysql"
+	LibraryTypeRedis = "redis"
 )
 
 func init() {
@@ -62,7 +64,7 @@ var (
 
 	libraryCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "lib_handle_total",
-		Help: "The total number of library handle",
+		Help: "The total number of third party library handle",
 	}, []string{"type", "method", "name", "server"})
 )
 

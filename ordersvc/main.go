@@ -13,14 +13,14 @@ import (
 func main() {
 	// init infra
 	dogapm.Infra.Init(
-		dogapm.WithMySQL("root:root@tcp(127.0.0.1:23306)/ordersvc?charset=utf8mb4&parseTime=True&loc=Local"),
-		dogapm.WithEnableAPM("127.0.0.1:4317"),
+		dogapm.WithMySQL("root:root@tcp(apm-mysql:3306)/ordersvc?charset=utf8mb4&parseTime=True&loc=Local"),
+		dogapm.WithEnableAPM("apm-otel-collector:4317"),
 		dogapm.WithMetric(metric.All()...),
 	)
 
 	// init grpc clients
-	grpcclient.UserClient = protos.NewUserServiceClient(dogapm.NewGrpcClient(":30002"))
-	grpcclient.SkuClient = protos.NewSkuServiceClient(dogapm.NewGrpcClient(":30003"))
+	grpcclient.UserClient = protos.NewUserServiceClient(dogapm.NewGrpcClient("apm-ubuntu:30002", "usrsvc"))
+	grpcclient.SkuClient = protos.NewSkuServiceClient(dogapm.NewGrpcClient("apm-ubuntu:30003", "skusvc"))
 
 	// init http server
 	hs := dogapm.NewHTTPServer(":30001")

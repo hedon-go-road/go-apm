@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-sql-driver/mysql"
+	"github.com/xwb1989/sqlparser"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -23,8 +25,9 @@ const (
 	longTxThreshold  = 3 * time.Second
 )
 
-func wrap(d driver.Driver) driver.Driver {
+func wrap(d driver.Driver, connectURL string) driver.Driver {
 	tracer := otel.Tracer(mysqlTracerName)
+	dsn, _ := mysql.ParseDSN(connectURL)
 	return &Driver{d, Hooks{
 		Before: func(ctx context.Context, query string, args ...any) (context.Context, error) {
 			ctx = context.WithValue(ctx, ctxKeyBeginTime, time.Now())
@@ -38,6 +41,12 @@ func wrap(d driver.Driver) driver.Driver {
 			return ctx, nil
 		},
 		After: func(ctx context.Context, query string, args ...any) (context.Context, error) {
+			// metric
+			table, op, err, multiTable := SQLParser.parseTable(query)
+			if !multiTable && err == nil {
+				libraryCounter.WithLabelValues(LibraryTypeMySQL, sqlparser.StmtType(op), table, dsn.DBName+"."+dsn.Addr).Inc()
+			}
+
 			beginTime := time.Now()
 			if begin := ctx.Value(ctxKeyBeginTime); begin != nil {
 				beginTime = begin.(time.Time)

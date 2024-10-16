@@ -7,10 +7,12 @@ import (
 	"net"
 	"time"
 
+	"github.com/hedon-go-road/go-apm/dogapm/internal"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
@@ -40,7 +42,7 @@ func (s *GrpcServer) Start() {
 		panic("GRPC Server failed to listen: " + err.Error())
 	}
 	go func() {
-		log.Println("starting grpc server")
+		log.Printf("[%s][%s] starting grpc server on: %s\n", internal.BuildInfo.AppName(), internal.BuildInfo.Hostname(), s.addr)
 		if err := s.Serve(lis); err != nil {
 			panic("GRPC Server failed to serve: " + err.Error())
 		}
@@ -66,13 +68,21 @@ func unaryServerInterceptor() grpc.UnaryServerInterceptor {
 		// extract the metadata from the context
 		ctx = otel.GetTextMapPropagator().Extract(ctx, &metadataSupplier{metadata: &md})
 
-		// start the span
+		// trace: start the span
 		ctx, span := tracer.Start(ctx, info.FullMethod, trace.WithSpanKind(trace.SpanKindServer))
+
+		statusCode := codes.OK
 		start := time.Now()
 		defer func() {
 			span.SetAttributes(attribute.String("grpc.duration_ms", fmt.Sprintf("%d", time.Since(start).Milliseconds())))
 			span.End()
+
+			// metric
+			serverHandleHistogram.WithLabelValues(MetricTypeGRPC, info.FullMethod, statusCode.String()).Observe(time.Since(start).Seconds())
 		}()
+
+		// metric
+		serverHandleCounter.WithLabelValues(MetricTypeGRPC, info.FullMethod).Inc()
 
 		// call the handler
 		resp, err := handler(ctx, req)
@@ -80,6 +90,7 @@ func unaryServerInterceptor() grpc.UnaryServerInterceptor {
 		// set the status and error on the span
 		if err != nil {
 			s, _ := status.FromError(err)
+			statusCode = s.Code()
 			span.RecordError(err, trace.WithTimestamp(time.Now()), trace.WithStackTrace(true))
 			span.SetAttributes(attribute.Bool("error", true))
 			span.SetAttributes(attribute.String("grpc.status_code", s.Code().String()))

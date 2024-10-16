@@ -5,4 +5,14 @@ scrape_configs:
     scrape_interval: 5s
     metrics_path: /metrics
     static_configs:
-      - targets: ['10.30.16.34:30001'] # use host ip
+      - targets: ['apm-ubuntu:30001'] # use host ip
+  - job_name: 'usrsvc'
+    scrape_interval: 5s
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['apm-ubuntu:30012'] # use host ip
+  - job_name: 'skusvc'
+    scrape_interval: 5s
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['apm-ubuntu:30013'] # use host ip

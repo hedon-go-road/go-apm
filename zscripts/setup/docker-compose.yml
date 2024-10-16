@@ -64,3 +64,28 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - 9090:9090
+  apm-ubuntu:
+    image: ubuntu:24.04
+    container_name: apm-ubuntu
+    restart: always
+    volumes:
+      - "./build:/build"
+      - "./start-services.sh:/start-services.sh"
+    ports:
+      - 30001:30001
+      - 30002:30002
+      - 30003:30003
+      - 30012:30012
+      - 30013:30013
+    working_dir: /build
+    command: ["/bin/bash", "/start-services.sh"]
+    environment:
+      - MYSQL_HOST=apm-mysql
+      - REDIS_HOST=apm-redis
+    depends_on:
+      - apm-mysql
+      - apm-redis
+      - apm-jaeger
+      - apm-otel-collector
+      - apm-grafana
+      - apm-prometheus

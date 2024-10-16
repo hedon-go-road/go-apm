@@ -36,7 +36,7 @@ func WithMySQL(url string) InfraOption {
 		driverName := fmt.Sprintf("%s-%s", "mysql", "wrap")
 
 		once.Do(func() {
-			sql.Register(driverName, wrap(&mysql.MySQLDriver{}))
+			sql.Register(driverName, wrap(&mysql.MySQLDriver{}, url))
 		})
 
 		db, err := sql.Open(driverName, url)

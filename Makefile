@@ -8,6 +8,7 @@ docker-down:
 	docker compose -f zscripts/setup/docker-compose.yml down
 
 docker-restart:
+	make build-ubuntu
 	make docker-down
 	make docker-up
 
@@ -56,3 +57,8 @@ status:
 
 ab:
 	bash zscripts/setup/ab.sh
+
+build-ubuntu:
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o zscripts/setup/build/usrsvc usrsvc/main.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o zscripts/setup/build/skusvc skusvc/main.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o zscripts/setup/build/ordersvc ordersvc/main.go

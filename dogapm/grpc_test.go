@@ -24,7 +24,7 @@ func TestGrpcServerAndClient(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	client := NewGrpcClient("localhost:50051")
+	client := NewGrpcClient("localhost:50051", "test server")
 	res, err := protos.NewHelloServiceClient(client).SayHello(context.Background(),
 		&protos.HelloRequest{Name: "World"})
 	assert.Nil(t, err)
