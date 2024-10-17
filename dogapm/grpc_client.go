@@ -43,7 +43,6 @@ func unaryInterceptor(server string) grpc.UnaryClientInterceptor {
 
 	return func(ctx context.Context, method string, req, reply any,
 		cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-
 		// trace
 		ctx, span := tracer.Start(ctx, method, trace.WithSpanKind(trace.SpanKindClient))
 		start := time.Now()

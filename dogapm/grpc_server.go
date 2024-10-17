@@ -58,7 +58,6 @@ func unaryServerInterceptor() grpc.UnaryServerInterceptor {
 
 	return func(ctx context.Context, req interface{},
 		info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-
 		// get the metadata from the incoming context or create a new one
 		md, ok := metadata.FromIncomingContext(ctx)
 		if !ok {
