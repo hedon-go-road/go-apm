@@ -130,6 +130,6 @@ func (i *infra) Init(opts ...InfraOption) {
 
 func WithMetric(collectors ...prometheus.Collector) InfraOption {
 	return func(i *infra) {
-		prometheus.MustRegister(collectors...)
+		MetricsReg.MustRegister(collectors...)
 	}
 }

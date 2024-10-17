@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -78,6 +79,7 @@ func (o *order) Add(w http.ResponseWriter, request *http.Request) {
 
 	// add order-success metric
 	metric.OrderSuccessCounter.WithLabelValues(strconv.Itoa(skuID)).Inc()
+	log.Println("order success", skuID)
 
 	// return
 	dogapm.HttpStatus.Ok(w)
