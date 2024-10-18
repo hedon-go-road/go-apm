@@ -3,12 +3,13 @@ package dogapm
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
-	"github.com/hedon-go-road/go-apm/dogapm/internal"
+	"github.com/google/gops/agent"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/otel"
@@ -19,6 +20,14 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"mosn.io/holmes"
+
+	// import this package to fix the issue: https://github.com/open-telemetry/opentelemetry-collector/issues/10476
+	// since we need to specify the version of google.golang.org/genproto, but we do not use it in the code,
+	// so we need to import it to avoid deleting it by the go mod tidy command
+	_ "google.golang.org/genproto/protobuf/api"
+
+	"github.com/hedon-go-road/go-apm/dogapm/internal"
 )
 
 type infra struct {
@@ -131,5 +140,46 @@ func (i *infra) Init(opts ...InfraOption) {
 func WithMetric(collectors ...prometheus.Collector) InfraOption {
 	return func(i *infra) {
 		MetricsReg.MustRegister(collectors...)
+	}
+}
+
+type AutoPProfOpt struct {
+	EnableCPU       bool
+	EnableMem       bool
+	EnableGoroutine bool
+}
+
+type autoPProfReporter struct{}
+
+//nolint:lll
+func (a *autoPProfReporter) Report(pType, filename string, reason holmes.ReasonType, eventID string, sampleTime time.Time, pprofBytes []byte, scene holmes.Scene) error {
+	Logger.Error(context.Background(), "homesGen", map[string]any{
+		"reason":  reason,
+		"eventID": filename,
+		"pType":   pType,
+	}, errors.New("auto record running state"))
+	return nil
+}
+
+func WithAutoPProf(autoPProfOpts *AutoPProfOpt, opts ...holmes.Option) InfraOption {
+	if err := agent.Listen(agent.Options{}); err != nil {
+		panic(err)
+	}
+
+	opts = append(opts, holmes.WithProfileReporter(&autoPProfReporter{}))
+	return func(i *infra) {
+		h, err := holmes.New(opts...)
+		if err == nil && autoPProfOpts != nil {
+			if autoPProfOpts.EnableCPU {
+				h.EnableCPUDump()
+			}
+			if autoPProfOpts.EnableMem {
+				h.EnableMemDump()
+			}
+			if autoPProfOpts.EnableGoroutine {
+				h.EnableGoroutineDump()
+			}
+			h.Start()
+		}
 	}
 }

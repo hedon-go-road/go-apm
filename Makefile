@@ -2,13 +2,13 @@ genpb:
 	protoc --go_out=./protos --go-grpc_out=./protos ./protos/*.proto
 
 docker-up:
+	make build-ubuntu
 	docker compose -f zscripts/setup/docker-compose.yml up -d
 
 docker-down:
 	docker compose -f zscripts/setup/docker-compose.yml down
 
 docker-restart:
-	make build-ubuntu
 	make docker-down
 	make docker-up
 

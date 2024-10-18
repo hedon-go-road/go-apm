@@ -7,7 +7,7 @@ go-apm is a simple apm system for golang.
 Start the base infrastructures and services:
 
 ```bash
-make setup
+make docker-up
 ```
 
 Send some requests to the services:

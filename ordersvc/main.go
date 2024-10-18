@@ -16,6 +16,11 @@ func main() {
 		dogapm.WithMySQL("root:root@tcp(apm-mysql:3306)/ordersvc?charset=utf8mb4&parseTime=True&loc=Local"),
 		dogapm.WithEnableAPM("apm-otel-collector:4317"),
 		dogapm.WithMetric(metric.All()...),
+		dogapm.WithAutoPProf(&dogapm.AutoPProfOpt{
+			EnableCPU:       true,
+			EnableMem:       true,
+			EnableGoroutine: true,
+		}),
 	)
 
 	// init grpc clients
