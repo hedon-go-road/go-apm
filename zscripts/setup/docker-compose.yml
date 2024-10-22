@@ -109,6 +109,8 @@ services:
       - apm-elasticsearch
     ports:
       - 5601:5601
+    volumes:
+      - ./volumes/kibana/data:/usr/share/kibana/data
   apm-filebeat:
     image: docker.elastic.co/beats/filebeat:7.14.2
     container_name: apm-filebeat
