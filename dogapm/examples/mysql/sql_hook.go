@@ -12,7 +12,7 @@ import (
 func main() {
 	dogapm.Infra.Init(
 		dogapm.WithMySQL("root:root@tcp(127.0.0.1:23306)/ordersvc"),
-		dogapm.WithEnableAPM("127.0.0.1:4317"),
+		dogapm.WithEnableAPM("127.0.0.1:4317", "", 10),
 	)
 	defer dogapm.EndPoint.Close()
 

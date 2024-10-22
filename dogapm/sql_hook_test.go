@@ -12,7 +12,7 @@ import (
 func TestSqlHook(t *testing.T) {
 	Infra.Init(
 		WithMySQL("root:root@tcp(127.0.0.1:23306)/ordersvc"),
-		WithEnableAPM("127.0.0.1:4317"),
+		WithEnableAPM("127.0.0.1:4317", "", 10),
 	)
 	defer EndPoint.Close()
 

@@ -10,7 +10,7 @@ func main() {
 	dogapm.Infra.Init(
 		dogapm.WithMySQL("root:root@tcp(apm-mysql:3306)/usrsvc?charset=utf8mb4&parseTime=True&loc=Local"),
 		dogapm.WithRedis("apm-redis:6379"),
-		dogapm.WithEnableAPM("apm-otel-collector:4317"),
+		dogapm.WithEnableAPM("apm-otel-collector:4317", "/logs", 10),
 		dogapm.WithMetric(),
 	)
 

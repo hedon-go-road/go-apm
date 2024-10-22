@@ -10,7 +10,7 @@ import (
 func main() {
 	dogapm.Infra.Init(
 		dogapm.WithRedis("127.0.0.1:26379"),
-		dogapm.WithEnableAPM("127.0.0.1:4317"),
+		dogapm.WithEnableAPM("127.0.0.1:4317", "", 10),
 	)
 	defer dogapm.EndPoint.Close()
 

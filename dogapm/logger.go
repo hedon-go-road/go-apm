@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/hedon-go-road/go-apm/dogapm/internal"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -14,6 +15,7 @@ const traceID = "trace_id"
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetFormatter(&logrus.JSONFormatter{})
+	logrus.AddHook(&logrusHook{})
 }
 
 type logger struct{}
@@ -55,4 +57,16 @@ func (l *logger) Fatal(ctx context.Context, action string, kv map[string]any) {
 	logrus.WithContext(ctx).
 		WithFields(logrus.Fields(kv)).
 		Fatal(action)
+}
+
+type logrusHook struct{}
+
+func (l *logrusHook) Levels() []logrus.Level {
+	return logrus.AllLevels
+}
+
+func (l *logrusHook) Fire(entry *logrus.Entry) error {
+	entry.Data["host"] = internal.BuildInfo.Hostname()
+	entry.Data["app"] = internal.BuildInfo.AppName()
+	return nil
 }

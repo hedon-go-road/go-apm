@@ -9,7 +9,7 @@ import (
 func TestRedisHook(t *testing.T) {
 	Infra.Init(
 		WithRedis("127.0.0.1:26379"),
-		WithEnableAPM("127.0.0.1:4317"),
+		WithEnableAPM("127.0.0.1:4317", "", 10),
 	)
 	defer EndPoint.Close()
 

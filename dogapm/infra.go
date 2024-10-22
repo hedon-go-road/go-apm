@@ -5,13 +5,16 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"sync"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/gops/agent"
+	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/redis/go-redis/v9"
+	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
@@ -79,7 +82,7 @@ func WithRedis(url string) InfraOption {
 	}
 }
 
-func WithEnableAPM(otelEndpoint string) InfraOption {
+func WithEnableAPM(otelEndpoint, logPathPrefix string, maxLogCnt uint) InfraOption {
 	return func(i *infra) {
 		ctx := context.Background()
 		// Set up a resource
@@ -118,6 +121,17 @@ func WithEnableAPM(otelEndpoint string) InfraOption {
 
 		// Use shutdown to flush and close the tracer provider when the application exits
 		globalClosers = append(globalClosers, &traceProviderComponent{tracerProvider})
+
+		// logs
+		path := filepath.Join(logPathPrefix, internal.BuildInfo.AppName()+".%Y%m%d.log")
+		writer, err := rotatelogs.New(path,
+			rotatelogs.WithRotationCount(maxLogCnt),
+			rotatelogs.WithRotationTime(time.Hour&24*7),
+		)
+		if err != nil {
+			panic(err)
+		}
+		logrus.SetOutput(writer)
 	}
 }
 
