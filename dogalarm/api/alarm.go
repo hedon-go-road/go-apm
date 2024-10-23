@@ -14,6 +14,7 @@ import (
 	"github.com/hedon-go-road/go-apm/dogalarm/model"
 	"github.com/hedon-go-road/go-apm/dogalarm/notice"
 	"github.com/hedon-go-road/go-apm/dogapm"
+	"github.com/spf13/cast"
 )
 
 type alarm struct{}
@@ -44,9 +45,10 @@ func (a *alarm) MetricWebHook(w http.ResponseWriter, r *http.Request) {
 		app, msg := alert.Labels.App, alert.Labels.Alertname
 		msg = fmt.Sprintf("content=%s, app=%s, value=%v", msg, app, alert.Values)
 		deployInfo := dao.DeployInfo.GetInfoByApp(app)
-		phoneWebHook := deployInfo["phone_webhook"].(string)
+		phoneWebHook := cast.ToString(deployInfo["phone_webhook"])
+		phone := cast.ToString(deployInfo["phone"])
 		if phoneWebHook != "" {
-			notice.Alarmer.Send(notice.Phone, msg, phoneWebHook)
+			notice.Alarmer.Send(notice.Phone, msg, phoneWebHook, phone)
 		}
 	}
 }
@@ -73,7 +75,7 @@ func (a *alarm) LogWebHook(w http.ResponseWriter, r *http.Request) {
 
 	app, host, msg := log.AppName, log.AppHost, log.Msg
 	deployInfo := dao.DeployInfo.GetInfoByApp(app)
-	feishuWebHook := deployInfo["feishu_webhook"].(string)
+	feishuWebHook := cast.ToString(deployInfo["feishu_webhook"])
 	if feishuWebHook == "" {
 		return
 	}
@@ -82,7 +84,7 @@ func (a *alarm) LogWebHook(w http.ResponseWriter, r *http.Request) {
 	if filterDuplicate(msg) {
 		return
 	}
-	notice.Alarmer.Send(notice.Feishu, msg, feishuWebHook)
+	notice.Alarmer.Send(notice.Feishu, msg, feishuWebHook, "")
 }
 
 const (

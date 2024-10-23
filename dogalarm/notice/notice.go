@@ -20,10 +20,10 @@ const (
 	Feishu   NoticeType = 3
 )
 
-func (a *alarm) Send(noticeType NoticeType, msg, webhook string) {
+func (a *alarm) Send(noticeType NoticeType, msg, webhook, phone string) {
 	switch noticeType {
 	case Phone:
-		a.sendPhone(msg, webhook)
+		a.sendPhone(msg, webhook, phone)
 	case DingTalk:
 		a.sendDingTalk(msg, webhook)
 	case Feishu:
@@ -36,12 +36,13 @@ func (a *alarm) Send(noticeType NoticeType, msg, webhook string) {
 	}
 }
 
-func (a *alarm) sendPhone(msg, webhook string) {
+func (a *alarm) sendPhone(msg, webhook, phone string) {
 	// TODO: send phone message
 	dogapm.Logger.Info(context.Background(), "notice", map[string]any{
 		"noticeType": Phone,
 		"msg":        msg,
 		"webhook":    webhook,
+		"phone":      phone,
 	})
 }
 

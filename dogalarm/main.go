@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/hedon-go-road/go-apm/dogalarm/api"
+	"github.com/hedon-go-road/go-apm/dogalarm/liveprobe"
 	"github.com/hedon-go-road/go-apm/dogalarm/metric"
 	"github.com/hedon-go-road/go-apm/dogapm"
 )
@@ -26,5 +27,7 @@ func main() {
 	})
 	httpServer.HandleFunc("/metric_webhook", api.Alarm.MetricWebHook)
 	httpServer.HandleFunc("/log_webhook", api.Alarm.LogWebHook)
+
+	liveprobe.Prober.Enable()
 	dogapm.EndPoint.Start()
 }

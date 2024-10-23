@@ -39,6 +39,9 @@ func NewHTTPServer(addr string) *HTTPServer {
 	s.Handle("/metrics", promhttp.HandlerFor(MetricsReg, promhttp.HandlerOpts{
 		Registry: MetricsReg,
 	}))
+	s.Handle("/heartbeat", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("ok"))
+	}))
 
 	globalStarters = append(globalStarters, s)
 	globalClosers = append(globalClosers, s)
