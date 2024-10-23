@@ -1,0 +1,36 @@
+{
+  "input": {
+    "type": "log"
+  },
+  "ecs": {
+    "version": "1.10.0"
+  },
+  "@version": "1",
+  "time": "2024-10-23T08:54:46Z",
+  "agent": {
+    "name": "95ea568c3e61",
+    "version": "7.14.2",
+    "hostname": "95ea568c3e61",
+    "type": "filebeat",
+    "ephemeral_id": "675275e8-580a-486a-8993-1cd26cd1bfcb",
+    "id": "e868cb49-38d8-4682-95ca-882f035d4c14"
+  },
+  "log": {
+    "offset": 4737,
+    "file": {
+      "path": "/logs/ordersvc.20241023.log"
+    }
+  },
+  "host": {
+    "name": "95ea568c3e61"
+  },
+  "level": "error",
+  "app_name": "ordersvc",
+  "app_host": "309b84394bf7",
+  "@timestamp": "2024-10-23T08:54:47.689Z",
+  "tags": [
+    "beats_input_codec_plain_applied"
+  ],
+  "msg": "get user info from user service",
+  "message": "{\"app\":\"ordersvc\",\"error\":\"rpc error: code = NotFound desc = user not found in db\",\"host\":\"309b84394bf7\",\"level\":\"error\",\"msg\":\"get user info from user service\",\"num\":1,\"sku_id\":3,\"time\":\"2024-10-23T08:54:46Z\",\"trace_id\":\"372d17f622ef43d1951ee370c5d1cd7d\",\"uid\":111}"
+}
