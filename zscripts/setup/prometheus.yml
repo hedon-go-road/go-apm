@@ -16,3 +16,8 @@ scrape_configs:
     metrics_path: /metrics
     static_configs:
       - targets: ['apm-ubuntu:30013'] # use host ip
+  - job_name: 'dogalarm'
+    scrape_interval: 5s
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['apm-ubuntu:30004'] # use host ip

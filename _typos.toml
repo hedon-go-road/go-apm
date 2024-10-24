@@ -1,5 +1,6 @@
 [default.extend-words]
 configer = "configer"
+guage = "guage"
 
 [files]
 extend-exclude = ["CHANGELOG.md", "notebooks/*", ".gitignore", "assets/*", "**.mod", "**.sum"]

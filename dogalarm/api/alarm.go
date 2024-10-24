@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hedon-go-road/go-apm/dogalarm/dao"
+	"github.com/hedon-go-road/go-apm/dogalarm/metric"
 	"github.com/hedon-go-road/go-apm/dogalarm/model"
 	"github.com/hedon-go-road/go-apm/dogalarm/notice"
 	"github.com/hedon-go-road/go-apm/dogapm"
@@ -82,6 +83,7 @@ func (a *alarm) LogWebHook(w http.ResponseWriter, r *http.Request) {
 
 	msg = fmt.Sprintf("content=%s, app=%s, host=%s", msg, app, host)
 	if filterDuplicate(msg) {
+		metric.DropAlarmCounter.WithLabelValues(app, host, "feishu").Inc()
 		return
 	}
 	notice.Alarmer.Send(notice.Feishu, msg, feishuWebHook, "")

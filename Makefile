@@ -13,8 +13,8 @@ docker-restart:
 	make docker-up
 
 setup:
-	docker compose  -f zscripts/setup/docker-compose.yml up -d
-	mysql -h 127.0.0.1 -P 23306 -u root -p'root' < zscripts/setup/init.sql
+	# docker compose  -f zscripts/setup/docker-compose.yml up -d
+	# mysql -h 127.0.0.1 -P 23306 -u root -p'root' < zscripts/setup/init.sql
 
 	make usr
 	make sku

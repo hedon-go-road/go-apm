@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hedon-go-road/go-apm/dogalarm/dao"
+	"github.com/hedon-go-road/go-apm/dogalarm/metric"
 	"github.com/hedon-go-road/go-apm/dogalarm/notice"
 	"github.com/hedon-go-road/go-apm/dogapm"
 	"github.com/spf13/cast"
@@ -70,5 +71,9 @@ func (p *probe) checkLive(checkUrl, appName, host, alarmURL, phone string, retry
 	}
 	if failCnt > 0 {
 		notice.Alarmer.Send(notice.Phone, alarmURL, fmt.Sprintf("service %s on host %s is down", appName, host), phone)
+		metric.LiveProbeGuage.WithLabelValues(appName, host).Set(float64(metric.Shutdown))
+	} else {
+		dogapm.Logger.Info(context.Background(), "live probe ok", map[string]any{"checkUrl": checkUrl, "appName": appName, "host": host})
+		metric.LiveProbeGuage.WithLabelValues(appName, host).Set(float64(metric.Living))
 	}
 }
